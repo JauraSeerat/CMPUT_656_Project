@@ -1,0 +1,4 @@
+data/*
+!data/.placeholder
+
+.DS_Store
