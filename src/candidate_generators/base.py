@@ -5,6 +5,9 @@ from data.mention import Mention
 
 
 class CandidateEntityGenerator(ABC):
+    def __init__(self, entity_dict: dict[str, Entity]):
+        self.entity_dict = entity_dict
+
     @abstractmethod
     def generate(self, mention: Mention) -> list[Entity]:
         pass
