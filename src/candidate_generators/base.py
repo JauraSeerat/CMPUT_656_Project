@@ -4,7 +4,7 @@ from data.entity import Entity
 from data.mention import Mention
 
 
-class CandidateEntityGenerator(ABC):
+class BaseCandidateEntityGenerator(ABC):
     def __init__(self, entity_dict: dict[str, Entity]):
         self.entity_dict = entity_dict
 
