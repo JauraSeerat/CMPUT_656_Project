@@ -2,7 +2,6 @@ import json
 import os
 from data.entity import Entity
 from data.mention import Mention
-from candidate_generators.tfidfcandidate import Candidates, CandidateReader
 
 from candidate_generators.base import BaseCandidateEntityGenerator
 
