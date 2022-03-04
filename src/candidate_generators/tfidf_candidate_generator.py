@@ -14,12 +14,14 @@ class TfidfCandidateGenerator(BaseCandidateEntityGenerator):
     def __init__(
         self,
         entity_dict: dict[str, Entity],
+        top_k: int = 64,
         filename: str = "train.json",
         path: str = os.path.join(cd, "artifacts", "tfidf_candidates"),
     ):
         BaseCandidateEntityGenerator.__init__(self, entity_dict)
         self.path = path
         self.filename = filename
+        self.top_k = top_k
         self.download_artifacts()
         self.candidate_dict = self.get_candidate_dict()
 
@@ -34,7 +36,7 @@ class TfidfCandidateGenerator(BaseCandidateEntityGenerator):
             self.entity_dict[candidate_id] for candidate_id in candidate_ids
         ]
 
-        return candidate_entities
+        return candidate_entities[: self.top_k]
 
     def get_candidate_dict(self) -> dict[str, list[str]]:
         candidate_dict = {}
