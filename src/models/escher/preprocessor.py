@@ -12,12 +12,12 @@ class EscherPreprocessor(BasePreprocessor):
         mention_window_size: int,
         entity_length: int,
         entity_dict: dict[str, Entity],
-        tokenizer,
+        tokenizer: DefinitionsTokenizer,
     ) -> None:
         self.mention_window_size = mention_window_size
         self.entity_length = entity_length
         self.entity_dict = entity_dict
-        self.tokenizer: DefinitionsTokenizer = tokenizer
+        self.tokenizer = tokenizer
 
     def preprocess_mention(self, mention: Mention) -> str:
         mention_entity = self.entity_dict[mention.context_document_id]
