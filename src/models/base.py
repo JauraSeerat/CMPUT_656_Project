@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from data.entity import Entity
-from data.mention import Mention
+from src.data.entity import Entity
+from src.data.mention import Mention
 
 
 class BaseModel(ABC):
