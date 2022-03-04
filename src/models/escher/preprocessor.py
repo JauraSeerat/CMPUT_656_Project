@@ -59,8 +59,12 @@ class EscherPreprocessor(BasePreprocessor):
         return mention_text
 
     def preprocess_entity(self, entity: Entity) -> str:
-        entity_token = entity.text.split(" ")
-        return entity_token[: self.entity_length]
+        entity_tokens = entity.text.split(" ")
+        entity_tokens = entity_tokens[: self.entity_length]
+
+        entity_text = " ".join(entity_tokens)
+
+        return entity_text
 
     def preprocess(
         self, mention: Mention, candidate_entities: list[Entity]
