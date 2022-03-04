@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional, Set, Iterable
 from nltk.corpus import wordnet as wn
 from nltk.corpus.reader import Synset
 
-from esc.utils.wsd import read_from_raganato
+from .wsd import read_from_raganato
 
 
 def wn_offset_from_synset(synset: Synset) -> str:
@@ -29,7 +29,10 @@ def synsets_from_lemmapos(lemma: str, pos: str) -> List[Synset]:
 
 
 def wn_offsets_from_lemmapos(lemma: str, pos: str) -> List[str]:
-    return [wn_offset_from_synset(syns) for syns in synsets_from_lemmapos(lemma, pos)]
+    return [
+        wn_offset_from_synset(syns)
+        for syns in synsets_from_lemmapos(lemma, pos)
+    ]
 
 
 class WNRelation(Enum):
@@ -53,23 +56,36 @@ class WNRelation(Enum):
             return None
 
 
-def extract_from_relation(synset: Synset, relation: WNRelation) -> List[Synset]:
+def extract_from_relation(
+    synset: Synset, relation: WNRelation
+) -> List[Synset]:
     if relation == WNRelation.HYPONYMY:
         return synset.hyponyms()
     elif relation == WNRelation.HOLONYMY:
-        return synset.part_holonyms() + synset.member_holonyms() + synset.substance_holonyms()
+        return (
+            synset.part_holonyms()
+            + synset.member_holonyms()
+            + synset.substance_holonyms()
+        )
     elif relation == WNRelation.ANTONYMY:
         return [_l.synset() for _l in synset.lemmas()[0].antonyms()]
     elif relation == WNRelation.HYPERNYMY:
         return synset.hypernyms()
     elif relation == WNRelation.MERONYMY:
-        return synset.member_meronyms() + synset.part_meronyms() + synset.substance_meronyms()
+        return (
+            synset.member_meronyms()
+            + synset.part_meronyms()
+            + synset.substance_meronyms()
+        )
     else:
         raise NotImplementedError
 
 
 def senses_from_relation(
-    starting_synset: Synset, relations: List[WNRelation], with_inverse: bool, working_relations: Set[WNRelation]
+    starting_synset: Synset,
+    relations: List[WNRelation],
+    with_inverse: bool,
+    working_relations: Set[WNRelation],
 ) -> List[Tuple[str, str, WNRelation]]:
     starting_synset_offset = wn_offset_from_synset(starting_synset)
     edges = []
@@ -80,11 +96,19 @@ def senses_from_relation(
         for extracted_synset in extracted_synsets:
             extracted_synset_offset = wn_offset_from_synset(extracted_synset)
             if relation in working_relations:
-                edges.append((starting_synset_offset, extracted_synset_offset, relation))
+                edges.append(
+                    (starting_synset_offset, extracted_synset_offset, relation)
+                )
 
             if with_inverse and relation.inverse() is not None:
                 if relation.inverse() in working_relations:
-                    edges.append((extracted_synset_offset, starting_synset_offset, relation.inverse()))
+                    edges.append(
+                        (
+                            extracted_synset_offset,
+                            starting_synset_offset,
+                            relation.inverse(),
+                        )
+                    )
 
     return edges
 
@@ -95,10 +119,14 @@ def one_hop_synsets(
     with_inverse: bool,
     working_relations: Optional[Set[WNRelation]] = None,
 ) -> List[Tuple[str, str, WNRelation]]:
-    synsets = [synset_from_offset(synset_offset) for synset_offset in synset_offsets]
+    synsets = [
+        synset_from_offset(synset_offset) for synset_offset in synset_offsets
+    ]
     one_hop_edges = []
     for synset in synsets:
-        one_hop_edges += senses_from_relation(synset, relations, with_inverse, working_relations)
+        one_hop_edges += senses_from_relation(
+            synset, relations, with_inverse, working_relations
+        )
     return one_hop_edges
 
 
@@ -140,7 +168,13 @@ def main():
 
     oh_synsets = one_hop_synsets(
         semeval_2007_senses,
-        [WNRelation.HYPERNYMY, WNRelation.HYPONYMY, WNRelation.ANTONYMY, WNRelation.MERONYMY, WNRelation.HOLONYMY],
+        [
+            WNRelation.HYPERNYMY,
+            WNRelation.HYPONYMY,
+            WNRelation.ANTONYMY,
+            WNRelation.MERONYMY,
+            WNRelation.HOLONYMY,
+        ],
         with_inverse=True,
     )
 
@@ -152,7 +186,9 @@ def main():
         sources_dict[s].append(relation_triplet)
         target_dict[t].append(relation_triplet)
 
-    semeval_2007_synsets = set([wn.lemma_from_key(ss).synset() for ss in semeval_2007_senses])
+    semeval_2007_synsets = set(
+        [wn.lemma_from_key(ss).synset() for ss in semeval_2007_senses]
+    )
 
     counter = []
     for s, t, rel in oh_synsets:

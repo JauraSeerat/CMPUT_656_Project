@@ -1,25 +1,9 @@
-from typing import NamedTuple, Optional, Tuple, List
-import torch
-
 from src.data.entity import Entity
 from src.data.mention import Mention
 from src.models.base import BasePreprocessor
 
-# from src.models.escher.esc.esc_dataset import DataElement
-# from src.models.escher.esc.utils.definitions_tokenizer import (
-#     DefinitionsTokenizer,
-# )
-
-
-class DataElement(NamedTuple):
-    encoded_final_sequence: torch.LongTensor
-    start_position: Optional[int] = None
-    end_position: Optional[int] = None
-    possible_offsets: Optional[List[str]] = None
-    gold_labels: Optional[List[str]] = None
-    gloss_positions: Optional[List[Tuple[int, int]]] = None
-    token_type_ids: Optional[torch.LongTensor] = None
-    wsd_instance: Optional[object] = None
+from .esc.esc_dataset import DataElement
+from .esc.utils.definitions_tokenizer import DefinitionsTokenizer
 
 
 class EscherPreprocessor(BasePreprocessor):
@@ -33,7 +17,7 @@ class EscherPreprocessor(BasePreprocessor):
         self.mention_window_size = mention_window_size
         self.entity_length = entity_length
         self.entity_dict = entity_dict
-        self.tokenizer = tokenizer
+        self.tokenizer: DefinitionsTokenizer = tokenizer
 
     def preprocess_mention(self, mention: Mention) -> str:
         mention_entity = self.entity_dict[mention.context_document_id]
