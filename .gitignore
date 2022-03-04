@@ -7,3 +7,4 @@ prototype.ipynb
 .vscode/
 .mypy_cache/
 .ipynb_checkpoints/
+src/candidate_generators/artifacts
