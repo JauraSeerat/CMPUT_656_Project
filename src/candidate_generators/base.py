@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from data.entity import Entity
-from data.mention import Mention
+from src.data.entity import Entity
+from src.data.mention import Mention
 
 
 class BaseCandidateEntityGenerator(ABC):
