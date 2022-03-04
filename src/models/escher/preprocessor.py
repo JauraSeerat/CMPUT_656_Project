@@ -1,35 +1,51 @@
-from data.entity import Entity
-from data.mention import Mention
-from models.base import BasePreprocessor
-from models.escher.esc.esc_dataset import DataElement
-from models.escher.esc.utils.definitions_tokenizer import DefinitionsTokenizer
+from src.data.entity import Entity
+from src.data.mention import Mention
+from src.models.base import BasePreprocessor
+from src.models.escher.esc.esc_dataset import DataElement
+from src.models.escher.esc.utils.definitions_tokenizer import (
+    DefinitionsTokenizer,
+)
 
 
 class EscherPreprocessor(BasePreprocessor):
     def __init__(
         self,
-        mention_length: int,
+        mention_window_size: int,
         entity_length: int,
         entity_dict: dict[str, Entity],
         tokenizer: DefinitionsTokenizer,
     ) -> None:
-        self.mention_length = mention_length
+        self.mention_window_size = mention_window_size
         self.entity_length = entity_length
         self.entity_dict = entity_dict
         self.tokenizer = tokenizer
 
-    def annotate(self, mention: Mention, mention_text: str) -> str:
-        return mention_text
-
     def preprocess_mention(self, mention: Mention) -> str:
         mention_entity = self.entity_dict[mention.context_document_id]
         mention_text = mention_entity.text
-        mention_text = self.annotate(mention, mention_text)
+
+        # Tokenize
+        mention_tokens = mention_text.split(" ")
+
+        # Insert <classify>, </classify> special tags
+        num_target_tokens = mention.end_index - mention.start_index + 1
+        mention_tokens.insert(mention.start_index, "<classify>")
+        mention_tokens.insert(
+            mention.start_index + num_target_tokens + 1, "</classify>"
+        )
+
+        # Select tokens within the window size
+        window_start = mention.start_index - self.mention_window_size
+        window_end = mention.end_index + self.mention_window_size + 2
+        mention_tokens = mention_tokens[window_start:window_end]
+
+        mention_text = " ".join(mention_tokens)
 
         return mention_text
 
     def preprocess_entity(self, entity: Entity) -> str:
-        return entity.text
+        entity_token = entity.text.split(" ")
+        return entity_token[: self.entity_length]
 
     def preprocess(
         self, mention: Mention, candidate_entities: list[Entity]
