@@ -1,10 +1,25 @@
+from typing import NamedTuple, Optional, Tuple, List
+import torch
+
 from src.data.entity import Entity
 from src.data.mention import Mention
 from src.models.base import BasePreprocessor
-from src.models.escher.esc.esc_dataset import DataElement
-from src.models.escher.esc.utils.definitions_tokenizer import (
-    DefinitionsTokenizer,
-)
+
+# from src.models.escher.esc.esc_dataset import DataElement
+# from src.models.escher.esc.utils.definitions_tokenizer import (
+#     DefinitionsTokenizer,
+# )
+
+
+class DataElement(NamedTuple):
+    encoded_final_sequence: torch.LongTensor
+    start_position: Optional[int] = None
+    end_position: Optional[int] = None
+    possible_offsets: Optional[List[str]] = None
+    gold_labels: Optional[List[str]] = None
+    gloss_positions: Optional[List[Tuple[int, int]]] = None
+    token_type_ids: Optional[torch.LongTensor] = None
+    wsd_instance: Optional[object] = None
 
 
 class EscherPreprocessor(BasePreprocessor):
@@ -13,7 +28,7 @@ class EscherPreprocessor(BasePreprocessor):
         mention_window_size: int,
         entity_length: int,
         entity_dict: dict[str, Entity],
-        tokenizer: DefinitionsTokenizer,
+        tokenizer,
     ) -> None:
         self.mention_window_size = mention_window_size
         self.entity_length = entity_length
@@ -36,7 +51,7 @@ class EscherPreprocessor(BasePreprocessor):
 
         # Select tokens within the window size
         window_start = mention.start_index - self.mention_window_size
-        window_end = mention.end_index + self.mention_window_size + 2
+        window_end = mention.end_index + self.mention_window_size + 3
         mention_tokens = mention_tokens[window_start:window_end]
 
         mention_text = " ".join(mention_tokens)
