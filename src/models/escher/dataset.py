@@ -1,4 +1,4 @@
-from src.candidate_generators.base import CandidateEntityGenerator
+from src.candidate_generators.base import BaseCandidateEntityGenerator
 from src.data.mention import MentionReader
 from src.models.base import BasePreprocessor
 from src.models.escher.esc.esc_dataset import QAExtractiveDataset
@@ -14,7 +14,7 @@ class Dataset(QAExtractiveDataset):
         tokens_per_batch: int,
         re_init_on_iter: bool,
         preprocessor: BasePreprocessor,
-        candidate_generator: CandidateEntityGenerator,
+        candidate_generator: BaseCandidateEntityGenerator,
         mention_reader: MentionReader,
         is_test: bool = False,
     ) -> None:
