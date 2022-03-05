@@ -4,10 +4,21 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.nn import CrossEntropyLoss
-from transformers import PretrainedConfig, PretrainedBartModel, BartModel, MBartForConditionalGeneration, AutoModel
+from transformers import (
+    PretrainedConfig,
+    PretrainedBartModel,
+    BartModel,
+    MBartForConditionalGeneration,
+    AutoModel,
+)
 from transformers.modeling_outputs import Seq2SeqQuestionAnsweringModelOutput
-from transformers.modeling_utils import PoolerStartLogits, PoolerEndLogits, PoolerAnswerClass, SquadHeadOutput
-from transformers.modeling_xlnet import XLNetForQuestionAnswering, XLNetModel
+from transformers.modeling_utils import (
+    PoolerStartLogits,
+    PoolerEndLogits,
+    PoolerAnswerClass,
+    SquadHeadOutput,
+)
+from transformers import XLNetForQuestionAnswering, XLNetModel
 
 
 class WSDXLNetForQuestionAnswering(XLNetForQuestionAnswering):
@@ -45,8 +56,14 @@ class WSDXLNetForQuestionAnswering(XLNetForQuestionAnswering):
         return_dict=None,
     ):
 
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        use_cache = self.training or (use_cache if use_cache is not None else self.config.use_cache)
+        return_dict = (
+            return_dict
+            if return_dict is not None
+            else self.config.use_return_dict
+        )
+        use_cache = self.training or (
+            use_cache if use_cache is not None else self.config.use_cache
+        )
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -66,16 +83,25 @@ class WSDXLNetForQuestionAnswering(XLNetForQuestionAnswering):
         hidden_states = transformer_outputs[0]
         start_logits = self.start_logits(hidden_states, p_mask=p_mask)
 
-        outputs = transformer_outputs[1:]  # Keep mems, hidden states, attentions if there are in it
+        outputs = transformer_outputs[
+            1:
+        ]  # Keep mems, hidden states, attentions if there are in it
 
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, let's remove the dimension added by batch splitting
-            for x in (start_positions, end_positions, cls_index, is_impossible):
+            for x in (
+                start_positions,
+                end_positions,
+                cls_index,
+                is_impossible,
+            ):
                 if x is not None and x.dim() > 1:
                     x.squeeze_(-1)
 
             # during training, compute the end logits based on the ground truth of the start position
-            end_logits = self.end_logits(hidden_states, start_positions=start_positions, p_mask=p_mask)
+            end_logits = self.end_logits(
+                hidden_states, start_positions=start_positions, p_mask=p_mask
+            )
 
             loss_fct = CrossEntropyLoss()
             start_loss = loss_fct(start_logits, start_positions)
@@ -84,7 +110,11 @@ class WSDXLNetForQuestionAnswering(XLNetForQuestionAnswering):
 
             if cls_index is not None and is_impossible is not None:
                 # Predict answerability from the representation of CLS and START
-                cls_logits = self.answer_class(hidden_states, start_positions=start_positions, cls_index=cls_index)
+                cls_logits = self.answer_class(
+                    hidden_states,
+                    start_positions=start_positions,
+                    cls_index=cls_index,
+                )
                 loss_fct_cls = nn.BCEWithLogitsLoss()
                 cls_loss = loss_fct_cls(cls_logits, is_impossible)
 
@@ -95,33 +125,53 @@ class WSDXLNetForQuestionAnswering(XLNetForQuestionAnswering):
                 return (total_loss,) + transformer_outputs[1:]
             else:
                 return Seq2SeqQuestionAnsweringModelOutput(
-                    loss=total_loss, start_logits=start_logits, end_logits=end_logits
+                    loss=total_loss,
+                    start_logits=start_logits,
+                    end_logits=end_logits,
                 )
 
         else:
             # during inference, compute the end logits based on beam search
             bsz, slen, hsz = hidden_states.size()
-            start_log_probs = F.softmax(start_logits, dim=-1)  # shape (bsz, slen)
+            start_log_probs = F.softmax(
+                start_logits, dim=-1
+            )  # shape (bsz, slen)
 
             start_top_log_probs, start_top_index = torch.topk(
                 start_log_probs, self.start_n_top, dim=-1
             )  # shape (bsz, start_n_top)
-            start_top_index_exp = start_top_index.unsqueeze(-1).expand(-1, -1, hsz)  # shape (bsz, start_n_top, hsz)
-            start_states = torch.gather(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
-            start_states = start_states.unsqueeze(1).expand(-1, slen, -1, -1)  # shape (bsz, slen, start_n_top, hsz)
+            start_top_index_exp = start_top_index.unsqueeze(-1).expand(
+                -1, -1, hsz
+            )  # shape (bsz, start_n_top, hsz)
+            start_states = torch.gather(
+                hidden_states, -2, start_top_index_exp
+            )  # shape (bsz, start_n_top, hsz)
+            start_states = start_states.unsqueeze(1).expand(
+                -1, slen, -1, -1
+            )  # shape (bsz, slen, start_n_top, hsz)
 
             hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
                 start_states
             )  # shape (bsz, slen, start_n_top, hsz)
             p_mask = p_mask.unsqueeze(-1) if p_mask is not None else None
-            end_logits = self.end_logits(hidden_states_expanded, start_states=start_states, p_mask=p_mask)
-            end_log_probs = F.softmax(end_logits, dim=1)  # shape (bsz, slen, start_n_top)
+            end_logits = self.end_logits(
+                hidden_states_expanded,
+                start_states=start_states,
+                p_mask=p_mask,
+            )
+            end_log_probs = F.softmax(
+                end_logits, dim=1
+            )  # shape (bsz, slen, start_n_top)
 
             end_top_log_probs, end_top_index = torch.topk(
                 end_log_probs, self.end_n_top, dim=1
             )  # shape (bsz, end_n_top, start_n_top)
-            end_top_log_probs = end_top_log_probs.view(-1, self.start_n_top * self.end_n_top)
-            end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
+            end_top_log_probs = end_top_log_probs.view(
+                -1, self.start_n_top * self.end_n_top
+            )
+            end_top_index = end_top_index.view(
+                -1, self.start_n_top * self.end_n_top
+            )
 
             start_states = torch.einsum(
                 "blh,bl->bh", hidden_states, start_log_probs
@@ -131,10 +181,18 @@ class WSDXLNetForQuestionAnswering(XLNetForQuestionAnswering):
             )  # Shape (batch size,): one single `cls_logits` for each sample
 
             if not return_dict:
-                outputs = (start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits)
+                outputs = (
+                    start_top_log_probs,
+                    start_top_index,
+                    end_top_log_probs,
+                    end_top_index,
+                    cls_logits,
+                )
                 return outputs + transformer_outputs[1:]
             else:
-                return Seq2SeqQuestionAnsweringModelOutput(start_logits=start_logits, end_logits=end_logits)
+                return Seq2SeqQuestionAnsweringModelOutput(
+                    start_logits=start_logits, end_logits=end_logits
+                )
 
 
 class WSDPoolerEndLogits(nn.Module):
@@ -186,9 +244,15 @@ class WSDPoolerEndLogits(nn.Module):
         ), "One of start_states, start_positions should be not None"
         if start_positions is not None:
             slen, hsz = hidden_states.shape[-2:]
-            start_positions = start_positions[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
-            start_states = hidden_states.gather(-2, start_positions)  # shape (bsz, 1, hsz)
-            start_states = start_states.expand(-1, slen, -1)  # shape (bsz, slen, hsz)
+            start_positions = start_positions[:, None, None].expand(
+                -1, -1, hsz
+            )  # shape (bsz, 1, hsz)
+            start_states = hidden_states.gather(
+                -2, start_positions
+            )  # shape (bsz, 1, hsz)
+            start_states = start_states.expand(
+                -1, slen, -1
+            )  # shape (bsz, slen, hsz)
 
         x = self.dense_0(torch.cat([hidden_states, start_states], dim=-1))
         x = self.activation(x)
@@ -257,12 +321,19 @@ class WSDSQuADHead(nn.Module):
 
         if start_positions is not None and end_positions is not None:
             # If we are on multi-GPU, let's remove the dimension added by batch splitting
-            for x in (start_positions, end_positions, cls_index, is_impossible):
+            for x in (
+                start_positions,
+                end_positions,
+                cls_index,
+                is_impossible,
+            ):
                 if x is not None and x.dim() > 1:
                     x.squeeze_(-1)
 
             # during training, compute the end logits based on the ground truth of the start position
-            end_logits = self.end_logits(hidden_states, start_positions=start_positions, p_mask=p_mask)
+            end_logits = self.end_logits(
+                hidden_states, start_positions=start_positions, p_mask=p_mask
+            )
 
             loss_fct = CrossEntropyLoss()
             start_loss = loss_fct(start_logits, start_positions)
@@ -271,7 +342,11 @@ class WSDSQuADHead(nn.Module):
 
             if cls_index is not None and is_impossible is not None:
                 # Predict answerability from the representation of CLS and START
-                cls_logits = self.answer_class(hidden_states, start_positions=start_positions, cls_index=cls_index)
+                cls_logits = self.answer_class(
+                    hidden_states,
+                    start_positions=start_positions,
+                    cls_index=cls_index,
+                )
                 loss_fct_cls = nn.BCEWithLogitsLoss()
                 cls_loss = loss_fct_cls(cls_logits, is_impossible)
 
@@ -279,41 +354,73 @@ class WSDSQuADHead(nn.Module):
                 total_loss += cls_loss * 0.5
 
             return Seq2SeqQuestionAnsweringModelOutput(
-                loss=total_loss, start_logits=start_logits, end_logits=end_logits
+                loss=total_loss,
+                start_logits=start_logits,
+                end_logits=end_logits,
             )
 
         else:
             # during inference, compute the end logits based on beam search
             bsz, slen, hsz = hidden_states.size()
-            start_log_probs = F.softmax(start_logits, dim=-1)  # shape (bsz, slen)
+            start_log_probs = F.softmax(
+                start_logits, dim=-1
+            )  # shape (bsz, slen)
 
             start_top_log_probs, start_top_index = torch.topk(
                 start_log_probs, self.start_n_top, dim=-1
             )  # shape (bsz, start_n_top)
-            start_top_index_exp = start_top_index.unsqueeze(-1).expand(-1, -1, hsz)  # shape (bsz, start_n_top, hsz)
-            start_states = torch.gather(hidden_states, -2, start_top_index_exp)  # shape (bsz, start_n_top, hsz)
-            start_states = start_states.unsqueeze(1).expand(-1, slen, -1, -1)  # shape (bsz, slen, start_n_top, hsz)
+            start_top_index_exp = start_top_index.unsqueeze(-1).expand(
+                -1, -1, hsz
+            )  # shape (bsz, start_n_top, hsz)
+            start_states = torch.gather(
+                hidden_states, -2, start_top_index_exp
+            )  # shape (bsz, start_n_top, hsz)
+            start_states = start_states.unsqueeze(1).expand(
+                -1, slen, -1, -1
+            )  # shape (bsz, slen, start_n_top, hsz)
 
             hidden_states_expanded = hidden_states.unsqueeze(2).expand_as(
                 start_states
             )  # shape (bsz, slen, start_n_top, hsz)
             p_mask = p_mask.unsqueeze(-1) if p_mask is not None else None
-            end_logits = self.end_logits(hidden_states_expanded, start_states=start_states, p_mask=p_mask)
-            end_log_probs = F.softmax(end_logits, dim=1)  # shape (bsz, slen, start_n_top)
+            end_logits = self.end_logits(
+                hidden_states_expanded,
+                start_states=start_states,
+                p_mask=p_mask,
+            )
+            end_log_probs = F.softmax(
+                end_logits, dim=1
+            )  # shape (bsz, slen, start_n_top)
 
             end_top_log_probs, end_top_index = torch.topk(
                 end_log_probs, self.end_n_top, dim=1
             )  # shape (bsz, end_n_top, start_n_top)
-            end_top_log_probs = end_top_log_probs.view(-1, self.start_n_top * self.end_n_top)
-            end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
+            end_top_log_probs = end_top_log_probs.view(
+                -1, self.start_n_top * self.end_n_top
+            )
+            end_top_index = end_top_index.view(
+                -1, self.start_n_top * self.end_n_top
+            )
 
-            start_states = torch.einsum("blh,bl->bh", hidden_states, start_log_probs)
-            cls_logits = self.answer_class(hidden_states, start_states=start_states, cls_index=cls_index)
+            start_states = torch.einsum(
+                "blh,bl->bh", hidden_states, start_log_probs
+            )
+            cls_logits = self.answer_class(
+                hidden_states, start_states=start_states, cls_index=cls_index
+            )
 
             if not return_dict:
-                return (start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits)
+                return (
+                    start_top_log_probs,
+                    start_top_index,
+                    end_top_log_probs,
+                    end_top_index,
+                    cls_logits,
+                )
             else:
-                return Seq2SeqQuestionAnsweringModelOutput(start_logits=start_logits, end_logits=end_logits)
+                return Seq2SeqQuestionAnsweringModelOutput(
+                    start_logits=start_logits, end_logits=end_logits
+                )
 
 
 class BartEncoderForQuestionAnswering(PretrainedBartModel):
@@ -352,7 +459,11 @@ class BartEncoderForQuestionAnswering(PretrainedBartModel):
             Positions are clamped to the length of the sequence (`sequence_length`).
             Position outside of the sequence are not taken into account for computing the loss.
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict
+            if return_dict is not None
+            else self.config.use_return_dict
+        )
         if start_positions is not None and end_positions is not None:
             use_cache = False
 
@@ -397,7 +508,9 @@ class BartEncoderForQuestionAnswering(PretrainedBartModel):
                 start_logits,
                 end_logits,
             ) + outputs[1:]
-            return ((total_loss,) + output) if total_loss is not None else output
+            return (
+                ((total_loss,) + output) if total_loss is not None else output
+            )
 
         return Seq2SeqQuestionAnsweringModelOutput(
             loss=total_loss,
@@ -448,7 +561,11 @@ class MBartForQuestionAnswering(PretrainedBartModel):
             Positions are clamped to the length of the sequence (`sequence_length`).
             Position outside of the sequence are not taken into account for computing the loss.
         """
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        return_dict = (
+            return_dict
+            if return_dict is not None
+            else self.config.use_return_dict
+        )
         if start_positions is not None and end_positions is not None:
             use_cache = False
 
@@ -493,7 +610,9 @@ class MBartForQuestionAnswering(PretrainedBartModel):
                 start_logits,
                 end_logits,
             ) + outputs[1:]
-            return ((total_loss,) + output) if total_loss is not None else output
+            return (
+                ((total_loss,) + output) if total_loss is not None else output
+            )
 
         return Seq2SeqQuestionAnsweringModelOutput(
             loss=total_loss,
@@ -515,7 +634,13 @@ class SquadQAModel(torch.nn.Module):
         self.qa_head = WSDSQuADHead(self.qa_encoder.config)
 
     def forward(
-        self, input_ids, attention_mask, start_positions=None, end_positions=None, p_mask=None, **kwargs
+        self,
+        input_ids,
+        attention_mask,
+        start_positions=None,
+        end_positions=None,
+        p_mask=None,
+        **kwargs
     ) -> Seq2SeqQuestionAnsweringModelOutput:
         hidden_states = self.qa_encoder(input_ids, attention_mask)[0]
 

@@ -4,9 +4,9 @@ import pytorch_lightning as pl
 
 from transformers import AutoModelForQuestionAnswering, get_linear_schedule_with_warmup
 
-from esc.rc_models import WSDXLNetForQuestionAnswering, SquadQAModel
-from esc.utils.lamb_optimizer import Lamb
-from esc.utils.optimizers import RAdam
+from .rc_models import WSDXLNetForQuestionAnswering, SquadQAModel
+from .utils.lamb_optimizer import Lamb
+from .utils.optimizers import RAdam
 
 
 SUPPORTED_MODELS = ["bart", "bert", "longformer", "roberta", "xlnet"]
