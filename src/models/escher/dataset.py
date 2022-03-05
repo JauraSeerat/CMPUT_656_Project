@@ -7,7 +7,7 @@ from src.models.escher.esc.utils.definitions_tokenizer import (
 )
 
 
-class Dataset(QAExtractiveDataset):
+class EscherDataset(QAExtractiveDataset):
     def __init__(
         self,
         tokenizer: DefinitionsTokenizer,
