@@ -9,6 +9,8 @@ from src.models.escher.esc.utils.definitions_tokenizer import (
 
 
 class EscherDataset(QAExtractiveDataset):
+    dataset_id = "wikia"
+
     def __init__(
         self,
         tokens_per_batch: int,
