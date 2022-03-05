@@ -79,19 +79,19 @@ def main():
     wandb_logger = WandbLogger(project="escher")
 
     trainer = pl.Trainer(
-        gpus=1,
+        gpus=0,
         accumulate_grad_batches=20,
         gradient_clip_val=10.0,
         logger=wandb_logger,
         checkpoint_callback=model_checkpoint,
-        max_steps=10000,
+        max_steps=2,
         val_check_interval=200,
         weights_save_path=os.path.join(cd, "checkpoint"),
     )
 
     trainer.fit(
         model,
-        train_dataloaders=train_dataloader,
+        train_dataloader=train_dataloader,
         val_dataloaders=val_dataloader,
     )
 
