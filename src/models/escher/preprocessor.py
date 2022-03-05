@@ -3,7 +3,7 @@ from src.data.mention import Mention
 from src.models.base import BasePreprocessor
 
 from .esc.esc_dataset import DataElement
-from .esc.utils.definitions_tokenizer import DefinitionsTokenizer
+from .esc.utils.definitions_tokenizer import get_tokenizer
 
 
 class EscherPreprocessor(BasePreprocessor):
@@ -12,12 +12,11 @@ class EscherPreprocessor(BasePreprocessor):
         mention_window_size: int,
         entity_length: int,
         entity_dict: dict[str, Entity],
-        tokenizer: DefinitionsTokenizer,
     ) -> None:
         self.mention_window_size = mention_window_size
         self.entity_length = entity_length
         self.entity_dict = entity_dict
-        self.tokenizer = tokenizer
+        self.tokenizer = get_tokenizer("facebook/bart-large", False)
 
     def preprocess_mention(self, mention: Mention) -> str:
         mention_entity = self.entity_dict[mention.context_document_id]
@@ -53,7 +52,6 @@ class EscherPreprocessor(BasePreprocessor):
     def preprocess(
         self, mention: Mention, candidate_entities: list[Entity]
     ) -> DataElement:
-        mention_input = self.preprocess_mention(mention)
         candidate_input = [
             self.preprocess_entity(entity) for entity in candidate_entities
         ]
@@ -61,17 +59,31 @@ class EscherPreprocessor(BasePreprocessor):
             entity.document_id for entity in candidate_entities
         ]
 
+        gold_label = mention.label_document_id
+        if gold_label not in candidate_labels:
+            return None
+        gold_idx = candidate_labels.index(gold_label)
+
+        mention_input = self.preprocess_mention(mention)
+
+        # BART does not make use of token type ids,
+        # therefore a list of zeros is returned.
         (
             encoded_final_sequence,
             candidate_positions,
             token_type_ids,
         ) = self.tokenizer.prepare_sample(mention_input, candidate_input)
 
+        start_position, end_position = candidate_positions[gold_idx]
+
         data_element = DataElement(
             encoded_final_sequence=encoded_final_sequence,
             possible_offsets=candidate_labels,
             gloss_positions=candidate_positions,
             token_type_ids=token_type_ids,
+            gold_labels=[gold_label],
+            start_position=start_position,
+            end_position=end_position,
         )
 
         return data_element
