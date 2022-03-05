@@ -1,3 +1,4 @@
+from typing import Optional
 from src.data.entity import Entity
 from src.data.mention import Mention
 from src.models.base import BasePreprocessor
@@ -51,7 +52,7 @@ class EscherPreprocessor(BasePreprocessor):
 
     def preprocess(
         self, mention: Mention, candidate_entities: list[Entity]
-    ) -> DataElement:
+    ) -> Optional[DataElement]:
         candidate_input = [
             self.preprocess_entity(entity) for entity in candidate_entities
         ]
