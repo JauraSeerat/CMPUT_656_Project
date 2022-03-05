@@ -8,3 +8,4 @@ prototype.ipynb
 .mypy_cache/
 .ipynb_checkpoints/
 src/candidate_generators/artifacts
+src/models/escher/artifacts
