@@ -1,19 +1,27 @@
-from argparse import ArgumentParser
-import gdown
 import os
-from torch.utils.data import DataLoader
+from argparse import ArgumentParser
+
+import gdown
+import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
-import pytorch_lightning as pl
-
+from src.candidate_generators import TfidfCandidateGenerator
+from src.data.entity import Entity, EntityReader
+from src.data.mention import MentionReader
 from src.models.escher.dataset import EscherDataset
 from src.models.escher.esc.esc_pl_module import ESCModule
 from src.models.escher.preprocessor import EscherPreprocessor
-from src.data.entity import EntityReader
-from src.data.mention import MentionReader
-from src.candidate_generators import TfidfCandidateGenerator
+from torch.utils.data import DataLoader
 
 cd = os.path.dirname(os.path.abspath(__file__))
+
+
+def parse_args():
+    parser = ArgumentParser()
+
+    args = parser.parse_args()
+
+    return args
 
 
 def download_artifacts():
@@ -26,10 +34,38 @@ def download_artifacts():
     gdown.cached_download(url, checkpoint_path)
 
 
-def main():
-    parser = ArgumentParser()
+def get_dataloader(
+    datapath: str,
+    candidate_filename: str,
+    tokens_per_batch: int,
+    entity_dict: dict[str, Entity],
+    preprocessor: EscherPreprocessor,
+    re_init_on_iter: bool = False,
+    is_test: bool = False,
+    top_k: int = 64,
+) -> DataLoader:
+    mention_reader = MentionReader(datapath)
+    candidate_generator = TfidfCandidateGenerator(
+        entity_dict=entity_dict, top_k=top_k, filename=candidate_filename
+    )
 
-    args = parser.parse_args()
+    dataset = EscherDataset(
+        tokens_per_batch=tokens_per_batch,
+        re_init_on_iter=re_init_on_iter,
+        candidate_generator=candidate_generator,
+        is_test=is_test,
+        mention_reader=mention_reader,
+        preprocessor=preprocessor,
+    )
+    dataloader: DataLoader = DataLoader(
+        dataset, batch_size=None, num_workers=0
+    )
+
+    return dataloader
+
+
+def main():
+    args = parse_args()
 
     download_artifacts()
 
@@ -43,37 +79,27 @@ def main():
         mention_window_size=16, entity_length=32, entity_dict=entity_dict
     )
 
-    train_mention_reader = MentionReader("data/mentions/train.json")
-    train_candidate_generator = TfidfCandidateGenerator(
-        entity_dict=entity_dict, top_k=16, filename="train.json"
-    )
-
-    train_dataset = EscherDataset(
+    train_dataloader = get_dataloader(
+        datapath="data/mentions/train.json",
+        candidate_filename="train.json",
         tokens_per_batch=1024,
-        re_init_on_iter=False,
-        candidate_generator=train_candidate_generator,
-        is_test=False,
-        mention_reader=train_mention_reader,
+        entity_dict=entity_dict,
         preprocessor=preprocessor,
-    )
-    train_dataloader = DataLoader(
-        train_dataset, batch_size=None, num_workers=0
-    )
-
-    val_mention_reader = MentionReader("data/mentions/val.json")
-    val_candidate_generator = TfidfCandidateGenerator(
-        entity_dict=entity_dict, top_k=16, filename="val.json"
+        re_init_on_iter=False,
+        is_test=False,
+        top_k=16,
     )
 
-    val_dataset = EscherDataset(
+    val_dataloader = get_dataloader(
+        datapath="data/mentions/val.json",
+        candidate_filename="val.json",
         tokens_per_batch=1024,
-        re_init_on_iter=False,
-        candidate_generator=val_candidate_generator,
-        is_test=False,
-        mention_reader=val_mention_reader,
+        entity_dict=entity_dict,
         preprocessor=preprocessor,
+        re_init_on_iter=False,
+        is_test=False,
+        top_k=16,
     )
-    val_dataloader = DataLoader(val_dataset, batch_size=None, num_workers=0)
 
     model_checkpoint = ModelCheckpoint(save_top_k=0, verbose=True, mode="max")
     wandb_logger = WandbLogger(project="escher")
