@@ -34,4 +34,5 @@ class EscherDataset(QAExtractiveDataset):
             data_element = self.preprocessor.preprocess(
                 mention, candidate_entities
             )
-            self.data_store.append(data_element)
+            if data_element is not None:
+                self.data_store.append(data_element)
