@@ -4,20 +4,23 @@ from src.models.base import BasePreprocessor
 from src.models.escher.esc.esc_dataset import QAExtractiveDataset
 from src.models.escher.esc.utils.definitions_tokenizer import (
     DefinitionsTokenizer,
+    get_tokenizer,
 )
 
 
 class EscherDataset(QAExtractiveDataset):
     def __init__(
         self,
-        tokenizer: DefinitionsTokenizer,
         tokens_per_batch: int,
         re_init_on_iter: bool,
         preprocessor: BasePreprocessor,
         candidate_generator: BaseCandidateEntityGenerator,
         mention_reader: MentionReader,
+        tokenizer: DefinitionsTokenizer = None,
         is_test: bool = False,
     ) -> None:
+        if tokenizer is None:
+            tokenizer = get_tokenizer("facebook/bart-large", False)
         super().__init__(tokenizer, tokens_per_batch, re_init_on_iter, is_test)
 
         self.preprocessor = preprocessor
