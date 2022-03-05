@@ -9,3 +9,4 @@ prototype.ipynb
 .ipynb_checkpoints/
 src/candidate_generators/artifacts
 src/models/escher/artifacts
+wandb/
