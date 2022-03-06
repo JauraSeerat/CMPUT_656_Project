@@ -19,6 +19,28 @@ cd = os.path.dirname(os.path.abspath(__file__))
 def parse_args():
     parser = ArgumentParser()
 
+    parser.add_argument("--documents_path", type=str, default="data/documents")
+    parser.add_argument("--mentions_path", type=str, default="data/mentions")
+    parser.add_argument("--mention_window_size", type=int, default=16)
+    parser.add_argument("--entity_length", type=int, default=32)
+    parser.add_argument("--top_k_candidates", type=int, default=16)
+    parser.add_argument("--gpus", type=int, default=0)
+    parser.add_argument("--tokens_per_batch", type=int, default=1024)
+    parser.add_argument("--max_steps", type=int, default=1)
+    parser.add_argument("--accumulate_grad_batches", type=int, default=20)
+    parser.add_argument("--gradient_clip_val", type=float, default=10.0)
+    parser.add_argument("--val_check_interval", type=int, default=200)
+    parser.add_argument("--save_top_k_ckpts", type=int, default=0)
+    parser.add_argument(
+        "--weights_save_path", type=str, default=os.path.join(cd, "checkpoint")
+    )
+    parser.add_argument(
+        "--escher_ckpt",
+        type=str,
+        default=os.path.join(cd, "artifacts", "escher_semcor_best.ckpt"),
+    )
+    parser.add_argument("--wandb_project", type=str, default="escher")
+
     args = parser.parse_args()
 
     return args
@@ -35,8 +57,8 @@ def download_artifacts():
 
 
 def get_dataloader(
-    datapath: str,
-    candidate_filename: str,
+    mentions_path: str,
+    filename: str,
     tokens_per_batch: int,
     entity_dict: dict[str, Entity],
     preprocessor: EscherPreprocessor,
@@ -44,9 +66,9 @@ def get_dataloader(
     is_test: bool = False,
     top_k: int = 64,
 ) -> DataLoader:
-    mention_reader = MentionReader(datapath)
+    mention_reader = MentionReader(os.path.join(mentions_path, filename))
     candidate_generator = TfidfCandidateGenerator(
-        entity_dict=entity_dict, top_k=top_k, filename=candidate_filename
+        entity_dict=entity_dict, top_k=top_k, filename=filename
     )
 
     dataset = EscherDataset(
@@ -69,50 +91,52 @@ def main():
 
     download_artifacts()
 
-    model = ESCModule.load_from_checkpoint(
-        os.path.join(cd, "artifacts", "escher_semcor_best.ckpt")
-    )
+    model = ESCModule.load_from_checkpoint(args.escher_ckpt)
 
-    entity_reader = EntityReader("data/documents")
+    entity_reader = EntityReader(args.documents_path)
     entity_dict = entity_reader.read_all()
     preprocessor = EscherPreprocessor(
-        mention_window_size=16, entity_length=32, entity_dict=entity_dict
+        mention_window_size=args.mention_window_size,
+        entity_length=args.entity_length,
+        entity_dict=entity_dict,
     )
 
     train_dataloader = get_dataloader(
-        datapath="data/mentions/train.json",
-        candidate_filename="train.json",
-        tokens_per_batch=1024,
+        mentions_path=args.mentions_path,
+        filename="train.json",
+        tokens_per_batch=args.tokens_per_batch,
         entity_dict=entity_dict,
         preprocessor=preprocessor,
         re_init_on_iter=False,
         is_test=False,
-        top_k=16,
+        top_k=args.top_k_candidates,
     )
 
     val_dataloader = get_dataloader(
-        datapath="data/mentions/val.json",
-        candidate_filename="val.json",
-        tokens_per_batch=1024,
+        mentions_path=args.mentions_path,
+        filename="val.json",
+        tokens_per_batch=args.tokens_per_batch,
         entity_dict=entity_dict,
         preprocessor=preprocessor,
         re_init_on_iter=False,
         is_test=False,
-        top_k=16,
+        top_k=args.top_k_candidates,
     )
 
-    model_checkpoint = ModelCheckpoint(save_top_k=0, verbose=True, mode="max")
-    wandb_logger = WandbLogger(project="escher")
+    model_checkpoint = ModelCheckpoint(
+        save_top_k=args.save_top_k_ckpts, verbose=True, mode="max"
+    )
+    wandb_logger = WandbLogger(project=args.wandb_project)
 
     trainer = pl.Trainer(
-        gpus=0,
-        accumulate_grad_batches=20,
-        gradient_clip_val=10.0,
+        gpus=args.gpus,
+        accumulate_grad_batches=args.accumulate_grad_batches,
+        gradient_clip_val=args.gradient_clip_val,
         logger=wandb_logger,
         checkpoint_callback=model_checkpoint,
-        max_steps=2,
-        val_check_interval=200,
-        weights_save_path=os.path.join(cd, "checkpoint"),
+        max_steps=args.max_steps,
+        val_check_interval=args.val_check_interval,
+        weights_save_path=args.weights_save_path,
     )
 
     trainer.fit(
