@@ -2,6 +2,7 @@ import os
 from argparse import ArgumentParser
 from typing import Dict
 
+import torch
 from src.candidate_generators import TfidfCandidateGenerator
 from src.data.entity import Entity, EntityReader
 from src.data.mention import MentionReader
@@ -92,6 +93,9 @@ def main():
 
     model = ESCModule.load_from_checkpoint(args.ckpt_path)
     model.freeze()
+
+    if args.device >= 0:
+        model.to(torch.device(args.device))
 
     entity_reader = EntityReader(args.documents_path)
     entity_dict = entity_reader.read_all()
