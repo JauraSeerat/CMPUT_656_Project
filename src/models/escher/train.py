@@ -1,5 +1,6 @@
 import os
 from argparse import ArgumentParser
+from typing import Dict
 
 import gdown
 import pytorch_lightning as pl
@@ -60,7 +61,7 @@ def get_dataloader(
     mentions_path: str,
     filename: str,
     tokens_per_batch: int,
-    entity_dict: dict[str, Entity],
+    entity_dict: Dict[str, Entity],
     preprocessor: EscherPreprocessor,
     re_init_on_iter: bool = False,
     is_test: bool = False,

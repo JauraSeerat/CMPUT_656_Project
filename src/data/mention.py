@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import json
+from typing import List
 
 
 @dataclass
@@ -26,5 +27,5 @@ class MentionReader:
                 mention = Mention(**mention_dict)
                 yield mention
 
-    def read_all(self) -> list[Mention]:
+    def read_all(self) -> List[Mention]:
         return [mention for mention in self]

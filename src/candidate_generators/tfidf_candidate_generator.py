@@ -1,6 +1,7 @@
 import json
 import os
 import tarfile
+from typing import Dict, List
 
 import gdown
 from src.candidate_generators.base import BaseCandidateEntityGenerator
@@ -13,7 +14,7 @@ cd = os.path.dirname(os.path.abspath(__file__))
 class TfidfCandidateGenerator(BaseCandidateEntityGenerator):
     def __init__(
         self,
-        entity_dict: dict[str, Entity],
+        entity_dict: Dict[str, Entity],
         top_k: int = 64,
         filename: str = "train.json",
         path: str = os.path.join(cd, "artifacts", "tfidf_candidates"),
@@ -25,7 +26,7 @@ class TfidfCandidateGenerator(BaseCandidateEntityGenerator):
         self.download_artifacts()
         self.candidate_dict = self.get_candidate_dict()
 
-    def generate(self, mention: Mention) -> list[Entity]:
+    def generate(self, mention: Mention) -> List[Entity]:
         mention_id = mention.mention_id
 
         if mention_id not in self.candidate_dict:
@@ -38,7 +39,7 @@ class TfidfCandidateGenerator(BaseCandidateEntityGenerator):
 
         return candidate_entities[: self.top_k]
 
-    def get_candidate_dict(self) -> dict[str, list[str]]:
+    def get_candidate_dict(self) -> Dict[str, List[str]]:
         candidate_dict = {}
         with open(os.path.join(self.path, self.filename), "r") as f:
             for line in f:

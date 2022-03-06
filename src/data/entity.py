@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import os
 import json
+from typing import Dict
 
 
 @dataclass
@@ -22,5 +23,5 @@ class EntityReader:
                     entity = Entity(**entity_dict)
                     yield entity
 
-    def read_all(self) -> dict[str, Entity]:
+    def read_all(self) -> Dict[str, Entity]:
         return {entity.document_id: entity for entity in self}

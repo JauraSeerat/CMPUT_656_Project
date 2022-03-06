@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, List, Optional
 from src.data.entity import Entity
 from src.data.mention import Mention
 from src.models.base import BasePreprocessor
@@ -12,7 +12,7 @@ class EscherPreprocessor(BasePreprocessor):
         self,
         mention_window_size: int,
         entity_length: int,
-        entity_dict: dict[str, Entity],
+        entity_dict: Dict[str, Entity],
     ) -> None:
         self.mention_window_size = mention_window_size
         self.entity_length = entity_length
@@ -51,7 +51,7 @@ class EscherPreprocessor(BasePreprocessor):
         return entity_text
 
     def preprocess(
-        self, mention: Mention, candidate_entities: list[Entity]
+        self, mention: Mention, candidate_entities: List[Entity]
     ) -> Optional[DataElement]:
         candidate_input = [
             self.preprocess_entity(entity) for entity in candidate_entities
