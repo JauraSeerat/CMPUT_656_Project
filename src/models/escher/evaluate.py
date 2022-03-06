@@ -127,7 +127,7 @@ def main():
     mention_reader = MentionReader(
         os.path.join(args.mentions_path, args.filename)
     )
-    mention_num = len(mention_reader)
+    mention_num = len(mention_reader.read_all())
 
     accuracy = get_accuracy(
         prediction_report=prediction_report,
