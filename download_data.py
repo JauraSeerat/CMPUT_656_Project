@@ -1,0 +1,24 @@
+import os
+import tarfile
+
+import gdown
+
+
+def main():
+    url = ("https://drive.google.com/u/0/uc?"
+    "id=1ZcKZ1is0VEkY9kNfPxIG19qEIqHE5LIO&export=download"
+    )
+    path = "data"
+
+    archive_path = path + ".tar.bz2"
+
+    os.makedirs(path, exist_ok=True)
+    gdown.cached_download(url, archive_path)
+
+    with tarfile.open(archive_path, "r:bz2") as f:
+        f.extractall(os.path.dirname(archive_path))
+
+    os.remove(archive_path)
+
+if __name__ == "__main__":
+    main()
