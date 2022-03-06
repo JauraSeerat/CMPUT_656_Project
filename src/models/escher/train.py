@@ -40,7 +40,7 @@ def parse_args():
         type=str,
         default=os.path.join(cd, "artifacts", "escher_semcor_best.ckpt"),
     )
-    parser.add_argument("--wandb_project", type=str, default="escher")
+    parser.add_argument("--wandb_project", type=str, default="cmput656")
 
     args = parser.parse_args()
 
