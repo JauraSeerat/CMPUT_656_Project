@@ -107,7 +107,7 @@ def main():
         tokens_per_batch=args.tokens_per_batch,
         entity_dict=entity_dict,
         preprocessor=preprocessor,
-        re_init_on_iter=False,
+        re_init_on_iter=True,
         is_test=False,
         top_k=args.top_k_candidates,
     )
@@ -119,7 +119,7 @@ def main():
         entity_dict=entity_dict,
         preprocessor=preprocessor,
         re_init_on_iter=False,
-        is_test=False,
+        is_test=True,
         top_k=args.top_k_candidates,
     )
 
