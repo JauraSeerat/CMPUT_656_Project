@@ -11,3 +11,4 @@ src/candidate_generators/artifacts
 src/models/escher/artifacts
 wandb/
 src/models/escher/checkpoint
+lightning_logs/
