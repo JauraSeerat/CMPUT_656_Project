@@ -34,6 +34,6 @@ It will generate the fine tuned checkpoint in src/models/escher/checkpoint
 Find the checkpoint in src/models/escher/checkpoint folder. It could look like 
 "src/models/escher/checkpoint/cmput656/2d40ip8t/checkpoints/epoch=1.ckpt"
 
-`python3 -m src.models.escher.evaluate --device 1 --ckpt_path src/models/escher/checkpoint/cmput656_64cand_16entt/2d40ip8t/checkpoints/epoch=1.ckpt --filename test.json --top_k_candidates 64 --entity_length 11 --output output/predictions.txt`
+`python3 -m src.models.escher.evaluate --device 1 --ckpt_path src/models/escher/checkpoint/cmput656/2d40ip8t/checkpoints/epoch=1.ckpt --filename test.json --top_k_candidates 64 --entity_length 11 --output output/predictions.txt`
 
 The script dipslays the normalized and unnormalized scores.
