@@ -34,6 +34,7 @@ class DataElement(NamedTuple):
     gloss_positions: Optional[List[Tuple[int, int]]] = None
     token_type_ids: Optional[torch.LongTensor] = None
     wsd_instance: Optional[WSDInstance] = None
+    element_id: Optional[str] = None
 
 
 class QAExtractiveDataset(IterableDataset, ABC):
@@ -155,6 +156,11 @@ class QAExtractiveDataset(IterableDataset, ABC):
         if rep_elem.wsd_instance is not None:
             batch_dict["wsd_instances"] = [
                 be.wsd_instance for be in current_batch
+            ]
+
+        if rep_elem.element_id is not None:
+            batch_dict["element_ids"] = [
+                be.element_id for be in current_batch
             ]
 
         return batch_dict

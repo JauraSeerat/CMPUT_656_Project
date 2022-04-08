@@ -85,6 +85,7 @@ class EscherPreprocessor(BasePreprocessor):
             gold_labels=[gold_label],
             start_position=start_position,
             end_position=end_position,
+            element_id=mention.mention_id
         )
 
         return data_element

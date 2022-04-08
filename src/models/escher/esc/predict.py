@@ -29,6 +29,7 @@ class InstancePredictionReport(NamedTuple):
     predicted_start_indices_logits: torch.FloatTensor
     predicted_end_indices_logits: torch.FloatTensor
     wsd_instance: Optional[WSDInstance] = None
+    element_id: Optional[str] = None
 
 
 class ScoresReport(NamedTuple):
@@ -141,6 +142,7 @@ def predict(
                 possible_offsets = batch["possible_offsets"][i]
                 glosses_indices = batch["gloss_positions"][i]
                 wsd_instance = None if "wsd_instances" not in batch else batch["wsd_instances"][i]
+                element_id = None if "element_ids" not in batch else batch["element_ids"][i]
 
                 predicted_offsets = probabilistic_prediction(
                     start_logits_i, end_logits_i, glosses_indices, possible_offsets, prediction_type
@@ -166,6 +168,7 @@ def predict(
                     predicted_start_indices_logits=start_logits_i,
                     predicted_end_indices_logits=end_logits_i,
                     wsd_instance=wsd_instance,
+                    element_id=element_id
                 )
 
                 instance_prediction_reports.append(instance_prediction_report)

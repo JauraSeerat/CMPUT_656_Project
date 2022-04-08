@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from typing import Dict
 
 import torch
+from src import candidate_generators
 from src.candidate_generators import TfidfCandidateGenerator
 from src.data.entity import Entity, EntityReader
 from src.data.mention import MentionReader
@@ -31,6 +32,7 @@ def parse_args():
     parser.add_argument("--entity_length", type=int, default=32)
     parser.add_argument("--prediction_type", type=str, default="probabilistic")
     parser.add_argument("--device", type=int, default=0)
+    parser.add_argument("--output", type=str)
 
     args = parser.parse_args()
 
@@ -67,11 +69,9 @@ def get_dataloader(
     return dataloader
 
 
-def get_accuracy(
-    prediction_report: PredictionReport, mention_num: int, normalized=False
-):
+def get_accuracy(prediction_report: PredictionReport, mention_num: int):
     tp = 0
-    total = 0
+    # total = 0
 
     for instance_prediction in prediction_report.instances_prediction_reports:
         prediciton = instance_prediction.predicted_synsets[0]
@@ -80,10 +80,9 @@ def get_accuracy(
         if prediciton == gold:
             tp += 1
 
-        total += 1
+        # total += 1
 
-    total = total if normalized else mention_num
-    accuracy = tp / total
+    accuracy = tp / mention_num
 
     return accuracy
 
@@ -127,22 +126,42 @@ def main():
     mention_reader = MentionReader(
         os.path.join(args.mentions_path, args.filename)
     )
+    candidate_generator = TfidfCandidateGenerator(
+        entity_dict=entity_dict,
+        top_k=args.top_k_candidates,
+        filename=args.filename,
+    )
     mention_num = len(mention_reader.read_all())
+
+    normalized_mention_num = 0
+
+    for mention in mention_reader:
+        candidates = candidate_generator.generate(mention)
+        if mention.label_document_id in [candidate.document_id for candidate in candidates]:
+            normalized_mention_num += 1
+
+    print(f"Mention num: {mention_num}")
+    print(f"Normalized mention num: {normalized_mention_num}")
 
     accuracy = get_accuracy(
         prediction_report=prediction_report,
         mention_num=mention_num,
-        normalized=False,
     )
 
     normalized_accuracy = get_accuracy(
         prediction_report=prediction_report,
-        mention_num=mention_num,
-        normalized=True,
+        mention_num=normalized_mention_num,
     )
 
     print(f"Accuracy: {accuracy * 100:.3f}")
     print(f"Normalizaed accuracy: {normalized_accuracy * 100:.3f}")
+
+    with open(args.output, "w") as f:
+        f.write(f"mention_id\tpredicted_document_id\n")
+        for instance in prediction_report.instances_prediction_reports:
+            _id = instance.element_id
+            _pred = instance.predicted_synsets[0]
+            f.write(f"{_id}\t{_pred}\n") 
 
 
 if __name__ == "__main__":

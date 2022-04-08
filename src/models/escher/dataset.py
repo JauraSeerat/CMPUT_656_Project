@@ -31,6 +31,7 @@ class EscherDataset(QAExtractiveDataset):
 
     def init_dataset(self):
         self.data_store = []
+        self.mentions = []
         for mention in self.mention_reader:
             candidate_entities = self.candidate_generator.generate(mention)
             data_element = self.preprocessor.preprocess(
