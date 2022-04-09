@@ -40,6 +40,6 @@ The script dipslays the normalized and unnormalized scores.
 
 
 ### References
-- For this task, we adopted the dataset created by [Logeswaran et al. (2019)](https://aclanthology.org/P19-1335/)
+- For this task, we adopted the dataset created by [Logeswaran et al. (2019)](https://aclanthology.org/P19-1335/) available at https://github.com/lajanugen/zeshel
 - We adapt [ESCHER](https://github.com/SapienzaNLP/esc) (Barba et al., 2021), a transformer-based extractive sense comprehension system, to jointly encode mentions and entities
 - All resources are acknowledged in the submitted final paper.
